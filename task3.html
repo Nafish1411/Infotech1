@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic-Tac-Toe Web App - Task-03</title>
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .game-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        h1 {
+            margin-bottom: 1rem;
+            color: #2c3e50;
+        }
+
+        .mode-selector {
+            margin-bottom: 1rem;
+        }
+
+        .mode-selector label {
+            margin-right: 1rem;
+            font-weight: bold;
+        }
+
+        .mode-selector input[type="radio"] {
+            margin-right: 0.5rem;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-gap: 10px;
+            margin: 2rem auto;
+            width: 300px;
+        }
+
+        .cell {
+            width: 100px;
+            height: 100px;
+            background: #f8f9fa;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+
+        .cell:hover {
+            background: #e9ecef;
+            transform: scale(1.05);
+        }
+
+        .cell.x {
+            color: #e74c3c;
+        }
+
+        .cell.o {
+            color: #3498db;
+        }
+
+        .cell.winning {
+            background: #2ecc71 !important;
+            color: white;
+        }
+
+        .status {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: #2c3e50;
+            min-height: 1.5em;
+        }
+
+        .btn-reset {
+            padding: 0.8rem 2rem;
+            border: none;
+            border-radius: 50px;
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-reset:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .board {
+                width: 240px;
+            }
+
+            .cell {
+                width: 80px;
+                height: 80px;
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Tic-Tac-Toe</h1>
+        
+        <div class="mode-selector">
+            <label><input type="radio" name="mode" value="2p" checked> 2 Players</label>
+            <label><input type="radio" name="mode" value="ai"> vs AI</label>
+        </div>
+        
+        <div class="status" id="status">Player X's turn</div>
+        
+        <div class="board" id="board">
+            <div class="cell" data-index="0"></div>
+            <div class="cell" data-index="1"></div>
+            <div class="cell" data-index="2"></div>
+            <div class="cell" data-index="3"></div>
+            <div class="cell" data-index="4"></div>
+            <div class="cell" data-index="5"></div>
+            <div class="cell" data-index="6"></div>
+            <div class="cell" data-index="7"></div>
+            <div class="cell" data-index="8"></div>
+        </div>
+        
+        <button class="btn-reset" id="resetBtn">New Game</button>
+    </div>
+
+    <script>
+        // Game Logic
+        let board = Array(9).fill(null);
+        let currentPlayer = 'X';
+        let gameOver = false;
+        let mode = '2p'; // '2p' or 'ai'
+        let aiPlayer = 'O';
+
+        const statusEl = document.getElementById('status');
+        const boardEl = document.getElementById('board');
+        const resetBtn = document.getElementById('resetBtn');
+        const modeRadios = document.querySelectorAll('input[name="mode"]');
+
+        // Winning combinations
+        const winningCombos = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+            [0, 4, 8], [2, 4, 6] // Diagonals
+        ];
+
+        function renderBoard() {
+            const cells = boardEl.querySelectorAll('.cell');
+            cells.forEach((cell, index) => {
+                cell.textContent = board[index] || '';
+                cell.className = `cell ${board[index] ? board[index].toLowerCase() : ''}`;
+            });
+        }
+
+        function checkWin() {
+            for (let combo of winningCombos) {
+                const [a, b, c] = combo;
+                if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+                    // Highlight winning cells
+                    combo.forEach(index => {
+                        boardEl.querySelector(`[data-index="${index}"]`).classList.add('winning');
+                    });
+                    return board[a];
+                }
+            }
+            return null;
+        }
+
+        function checkDraw() {
+            return board.every(cell => cell !== null);
+        }
+
+        function handleClick(e) {
+            if (gameOver || e.target.textContent) return;
+
+            const index = parseInt(e.target.dataset.index);
+            board[index] = currentPlayer;
+            renderBoard();
+
+            const winner = checkWin();
+            if (winner) {
+                statusEl.textContent = `Player ${winner} wins!`;
+                gameOver = true;
+                return;
+            }
+
+            if (checkDraw()) {
+                statusEl.textContent = "It's a draw!";
+                gameOver = true;
+                return;
+            }
+
+            // Switch player
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            statusEl.textContent = `Player ${currentPlayer}'s turn`;
+
+            // If AI mode and it's AI's turn
+            if (mode === 'ai' && currentPlayer === aiPlayer && !gameOver) {
+                setTimeout(aiMove, 500); // Delay for realism
+            }
+        }
+
+        function aiMove() {
+            // Simple AI: Pick random empty cell
+            const emptyCells = board.map((cell, index) => cell === null ? index : null).filter(index => index !== null);
+            if (emptyCells.length > 0) {
+                const randomIndex = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+                board[randomIndex] = aiPlayer;
+                renderBoard();
+
+                const winner = checkWin();
+                if (winner) {
+                    statusEl.textContent = `AI ${winner} wins!`;
+                    gameOver = true;
+                    return;
+                }
+
+                if (checkDraw()) {
+                    statusEl.textContent = "It's a draw!";
+                    gameOver = true;
+                    return;
+                }
+
+                // Switch back to player
+                currentPlayer = 'X';
+                statusEl.textContent = `Player ${currentPlayer}'s turn`;
+            }
+        }
+
+        function resetGame() {
+            board = Array(9).fill(null);
+            currentPlayer = 'X';
+            gameOver = false;
+            mode = document.querySelector('input[name="mode"]:checked').value;
+            aiPlayer = mode === '2p' ? 'O' : 'O'; // AI always O
+            statusEl.textContent = `Player ${currentPlayer}'s turn`;
+            renderBoard();
+            boardEl.querySelectorAll('.cell').forEach(cell => cell.classList.remove('winning'));
+        }
+
+        // Event Listeners
+        boardEl.addEventListener('click', handleClick);
+        resetBtn.addEventListener('click', resetGame);
+        modeRadios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                if (!gameOver) resetGame(); // Reset if game ongoing
+            });
+        });
+
+        // Initial render
+        renderBoard();
+    </script>
+</body>
+</html>
